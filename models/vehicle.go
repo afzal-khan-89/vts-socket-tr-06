@@ -1,54 +1,43 @@
 package models
 
-import "fmt"
+import (
+	"fmt"
+	"log"
+	"time"
+)
 
-type Vehicledata struct {
-	Dtime     string
+type RawData struct {
+	DataTime  time.Time
 	Status    bool
 	Imei      string
 	Latitude  string
 	Longitude string
 }
 
-func GetAllVehicleData() []Vehicledata {
-	var vehicleData []Vehicledata
+func InsertRawData(d RawData) error {
 	db, err := dbConn()
 	if err != nil {
-		panic("fail to connect to database .")
+		log.Println("insert device db connection e akam ghotse ...")
 	}
 	defer db.Close()
+	qStmt, err := db.Prepare("INSERT INTO vehicles(imei, data_time, status, latitude, longitude) VALUES(?,?,?,?,?)")
+	if err != nil {
+		log.Println("insert device query banaite akam ghotse ...")
+	}
 
-	results, err := db.Query("SELECT * FROM gps_data")
+	log.Println("-imei : " + d.Imei)
+	log.Println("-latitude : " + d.Latitude)
+	log.Println("-longitude : " + d.Longitude)
+
+	res, err := qStmt.Exec(d.Imei, d.DataTime, d.Status, d.Latitude, d.Longitude)
 	if err != nil {
-		panic(err.Error()) // proper error handling instead of panic in your app
+		log.Println("device db te insert korte pare nai ... ")
 	}
-	for results.Next() {
-		var tag Vehicledata
-		err = results.Scan(&tag.Dtime, &tag.Imei, &tag.Latitude, &tag.Longitude, &tag.Status)
-		//err = results.Scan(&tag.ID, &tag.Imei, &tag.Dtime, &tag.Latitude, &tag.Longitude, &tag.Speed, &tag.Status)
-		if err != nil {
-			panic(err.Error()) // proper error handling instead of panic in your app
-		}
-		//fmt.Println(tag.Imei + "  " + tag.Longitude + "  " + tag.Latitude)
-		vehicleData = append(vehicleData, tag)
-		// and then print out the tag's Name attribute
-		// log.Printf(tag.imei)
-		// log.Printf(tag.latitude)
-		// log.Printf(tag.longitude)
-	}
-	return vehicleData
-}
-func SaveGpsData(data Vehicledata) (e error) {
-	db, err := dbConn()
+	id, err := res.LastInsertId()
 	if err != nil {
-		panic("fail to connect to database .")
+		log.Println("device insert kore last id receive korte pare nai ..")
 	}
-	defer db.Close()
-	insert, err := db.Query("INSERT INTO Vehicles VALUES (Vehicledata.Dtime, Vehicledata.Status, Vehicledata.Imei, Vehicledata.Latitude, Vehicledata.Longitude")
-	if err != nil {
-		panic("fail to insert to database .")
-	}
-	fmt.Println("Insert success full ... ")
-	insert.Close()
-	return nil
+	fmt.Println("Insert id", id)
+	// http.Redirect(w, r, "/", 301)
+	return err
 }
