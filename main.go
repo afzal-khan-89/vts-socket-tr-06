@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/afzal-khan-89/vts-socket-tr-06.git/clientHandler"
 	"github.com/afzal-khan-89/vts-socket-tr-06.git/packet"
 	"github.com/afzal-khan-89/vts-socket-tr-06.git/util"
 )
@@ -88,6 +89,13 @@ func handleIt(conn net.Conn) {
 				fmt.Println("log: Packet Length ", packet.PacketLength)
 				packet.Content = packet.IncomingBuffer[8 : len(packet.IncomingBuffer)-12]
 				fmt.Println("log: Incoming content  : ", packet.Content)
+
+				packet.PacketSerial = packet.IncomingBuffer[len(packet.Content)+8 : len(packet.IncomingBuffer)-8]
+				fmt.Println("log: Information Serial : ", packet.PacketSerial)
+
+				packet.StopBytes = packet.IncomingBuffer[len(packet.IncomingBuffer)-4 : len(packet.IncomingBuffer)]
+				fmt.Println("log: Stop bytes : ", packet.StopBytes)
+
 				packet.CRC = packet.IncomingBuffer[len(packet.IncomingBuffer)-8 : len(packet.IncomingBuffer)-4]
 				fmt.Println("log: PacketCrc", packet.CRC)
 
@@ -101,13 +109,13 @@ func handleIt(conn net.Conn) {
 				}
 				fmt.Println("log: status ", status)
 
-				protocolNumber := packet.IncomingBuffer[6:8]
-				fmt.Println("log: Progocol :: ", protocolNumber)
-				switch protocolNumber {
+				packet.Protocol = packet.IncomingBuffer[6:8]
+				fmt.Println("log: Progocol :: ", packet.Protocol)
+				switch packet.Protocol {
 				case PROTOCOL_LOGIN_MESSAGE:
 					fmt.Println("log: PROTOCOL_LOGIN_MESSAGE ")
-					handleLoginRequest(conn, &packet, &status, &terminalId)
-					// fmt.Println("terminal Id : ", terminalId)
+					clientHandler.HandleLoginRequest(conn, &packet, &terminalId, &status)
+					fmt.Println("mainLog : terminal Id : ", terminalId)
 				case PROTOCOL_HEARTBEAT_OR_STATUS_INFO:
 					fmt.Println("log: PROTOCOL_HEARTBEAT_OR_STATUS_INFO ")
 				case PROTOCOL_ALARM_DATA:
@@ -120,16 +128,6 @@ func handleIt(conn net.Conn) {
 		}
 	}
 }
-func handleLoginRequest(conn net.Conn, packet *packet.Packet, status *string, tarminalId *string) error {
-	*tarminalId = packet.Content
-	fmt.Println(fmt.Sprint("Terminal ID: ", *tarminalId))
-	_, err := conn.Write([]byte("dhoner matha ...\n"))
-	return err
-}
 func handleHeartbitData(conn net.Conn) error {
-	return nil
-}
-func responseForTerminal(startBytes *string, dataType *string, protocol *string) error {
-
 	return nil
 }

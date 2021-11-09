@@ -6,26 +6,6 @@ import (
 	"strconv"
 )
 
-func CRCcheck(data string, errorCode string) (status string, e error) {
-	var dataType string
-	/* check error code */
-	table := MakeTable(CRC16_X_25)
-	incomingErrorHex, _ := hex.DecodeString(data)
-	incomingDataCRC := Checksum(incomingErrorHex, table)        //Error code in uint16
-	crcCheck := strconv.FormatUint(uint64(incomingDataCRC), 16) //Error code in string
-	if len(crcCheck) == 3 {
-		crcCheck = fmt.Sprint("0", crcCheck)
-	}
-	if errorCode != crcCheck { //consider as void data
-		fmt.Println("** VOID Data")
-		dataType = "V"
-	} else {
-		dataType = "A"
-	}
-
-	return dataType, nil
-}
-
 type Params struct {
 	Poly   uint16
 	Init   uint16
@@ -72,6 +52,25 @@ type Table struct {
 	data   [256]uint16
 }
 
+func CRCcheck(data string, errorCode string) (status string, e error) {
+	var dataType string
+	/* check error code */
+	incomingErrorHex, _ := hex.DecodeString(data)
+	incomingDataCRC := Checksum(incomingErrorHex)               //Error code in uint16
+	crcCheck := strconv.FormatUint(uint64(incomingDataCRC), 16) //Error code in string
+	if len(crcCheck) == 3 {
+		crcCheck = fmt.Sprint("0", crcCheck)
+	}
+	if errorCode != crcCheck { //consider as void data
+		fmt.Println("** VOID Data")
+		dataType = "V"
+	} else {
+		dataType = "A"
+	}
+
+	return dataType, nil
+}
+
 // MakeTable returns the Table constructed from the specified algorithm.
 func MakeTable(params Params) *Table {
 	table := new(Table)
@@ -115,7 +114,8 @@ func Complete(crc uint16, table *Table) uint16 {
 }
 
 // Checksum returns CRC checksum of data usign scpecified algorithm represented by the Table.
-func Checksum(data []byte, table *Table) uint16 {
+func Checksum(data []byte) uint16 {
+	table := MakeTable(CRC16_X_25)
 	crc := Init(table)
 	crc = Update(crc, data, table)
 	return Complete(crc, table)

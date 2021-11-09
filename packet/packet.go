@@ -4,7 +4,7 @@ type Packet struct {
 	IncomingBuffer string
 	StartBytes     string
 	PacketLength   string
-	ProtocolNumber string
+	Protocol       string
 	Content        string
 	PacketSerial   string
 	CRC            string
