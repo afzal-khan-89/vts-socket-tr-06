@@ -7,6 +7,7 @@ type Packet struct {
 	ProtocolNumber string
 	Content        string
 	PacketSerial   string
+	CRC            string
 	StopBytes      string
 }
 

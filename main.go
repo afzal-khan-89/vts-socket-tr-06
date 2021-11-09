@@ -6,10 +6,10 @@ import (
 	"io"
 	"log"
 	"net"
-	"strconv"
 	"strings"
 	"time"
 
+	"github.com/afzal-khan-89/vts-socket-tr-06.git/packet"
 	"github.com/afzal-khan-89/vts-socket-tr-06.git/util"
 )
 
@@ -44,19 +44,17 @@ func main() {
 
 }
 func handleIt(conn net.Conn) {
-	var packet packet
-
 	var terminalId string
-	var startBytes string
 
 	for {
+		packet := packet.Packet{}
 		err := conn.SetReadDeadline(time.Now().Add(5 * time.Second)) // set SetReadDeadline
 		if err != nil {
 			log.Println("SetReadDeadline failed:", err)
 			return
 		}
 
-		buff := make([]byte, 8192)
+		buff := make([]byte, 1024)
 
 		readLength, err := conn.Read(buff) // recv data
 		if err != nil {
@@ -81,36 +79,35 @@ func handleIt(conn net.Conn) {
 
 		for i := 0; i < len(incomingDataArray)-1; i++ {
 			fmt.Println("log: incomingDataArray ", incomingDataArray[i])
-			//dataLength := len(incomingDataArray)
-			startBytes = incomingDataArray[i][:4]
-			if startBytes == "7878" {
-				packet.StartBytes = fmt.Sprint(incomingDataArray[i], "0d0a")
-				fmt.Println("log: Packet  : ", packet)
-				fmt.Println("log: packet length : ", len(packet))
-				packetLength := packet[4:6]
-				fmt.Println("log: Packet Length ", packetLength)
-				incomintContent := packet[8 : len(packet)-12]
-				fmt.Println("log: Incoming content  : ", incomintContent)
-				packetCRC := packet[len(packet)-8 : len(packet)-4]
-				fmt.Println("log: PacketCrc", packetCRC)
+			packet.IncomingBuffer = fmt.Sprint(incomingDataArray[i], "0d0a")
+			packet.StartBytes = incomingDataArray[i][:4]
+			if packet.StartBytes == "7878" {
+				fmt.Println("log: Incomint data  : ", packet.IncomingBuffer)
+				fmt.Println("log: packet length : ", len(packet.IncomingBuffer))
+				packet.PacketLength = packet.IncomingBuffer[4:6]
+				fmt.Println("log: Packet Length ", packet.PacketLength)
+				packet.Content = packet.IncomingBuffer[8 : len(packet.IncomingBuffer)-12]
+				fmt.Println("log: Incoming content  : ", packet.Content)
+				packet.CRC = packet.IncomingBuffer[len(packet.IncomingBuffer)-8 : len(packet.IncomingBuffer)-4]
+				fmt.Println("log: PacketCrc", packet.CRC)
 
-				stringToCheckCRC := packet[4 : len(incomintContent)+12]
+				stringToCheckCRC := packet.IncomingBuffer[4 : len(packet.Content)+12]
 				fmt.Println("log: crc string : ", stringToCheckCRC)
-				fmt.Println("log: incomingPacketLength ", len(incomintContent))
+				fmt.Println("log: incomingPacketLength ", len(packet.Content))
 
-				status, err := util.CRCcheck(stringToCheckCRC, packetCRC)
+				status, err := util.CRCcheck(stringToCheckCRC, packet.CRC)
 				if err != nil {
 					fmt.Println("log: CRC error")
 				}
 				fmt.Println("log: status ", status)
 
-				protocolNumber := packet[6:8]
+				protocolNumber := packet.IncomingBuffer[6:8]
 				fmt.Println("log: Progocol :: ", protocolNumber)
 				switch protocolNumber {
 				case PROTOCOL_LOGIN_MESSAGE:
 					fmt.Println("log: PROTOCOL_LOGIN_MESSAGE ")
-					handleLoginRequest(conn, &incomintContent, &terminalId, &startBytes)
-					fmt.Println("terminal Id : ", terminalId)
+					handleLoginRequest(conn, &packet, &status, &terminalId)
+					// fmt.Println("terminal Id : ", terminalId)
 				case PROTOCOL_HEARTBEAT_OR_STATUS_INFO:
 					fmt.Println("log: PROTOCOL_HEARTBEAT_OR_STATUS_INFO ")
 				case PROTOCOL_ALARM_DATA:
@@ -123,9 +120,9 @@ func handleIt(conn net.Conn) {
 		}
 	}
 }
-func handleLoginRequest(conn net.Conn, data *string, terminalId *string, startBytes *string) error {
-	*terminalId = *data
-	fmt.Println(fmt.Sprint("Terminal ID: ", *terminalId))
+func handleLoginRequest(conn net.Conn, packet *packet.Packet, status *string, tarminalId *string) error {
+	*tarminalId = packet.Content
+	fmt.Println(fmt.Sprint("Terminal ID: ", *tarminalId))
 	_, err := conn.Write([]byte("dhoner matha ...\n"))
 	return err
 }
@@ -133,45 +130,6 @@ func handleHeartbitData(conn net.Conn) error {
 	return nil
 }
 func responseForTerminal(startBytes *string, dataType *string, protocol *string) error {
-	if *dataType == "A" && (*protocol == "01" || *protocol == "13") {
-		/* prepare response data */
-		var outGoingPacket string
-		outGoingPacket = fmt.Sprint(outGoingPacket, startBytes)
-		outGoingPacket = fmt.Sprint(outGoingPacket, "05")
-		outGoingPacket = fmt.Sprint(outGoingPacket, protocol)
-		outGoingPacket = fmt.Sprint(outGoingPacket, protocol)
 
-		outgoingDataPacket := &startBytes                                         // initialize with start bits.
-		responseDataLength := "05"                                                //hex represent of decimal 5
-		outgoingDataPacket = fmt.Sprint(outgoingDataPacket, responseDataLength)   //push data length
-		outgoingDataPacket = fmt.Sprint(outgoingDataPacket, incomingDataProtocol) //push protocol no.
-		outgoingDataPacket = fmt.Sprint(outgoingDataPacket, serialNo)             //push serial no
-		/* generate and push error code */
-		data_p := fmt.Sprint(responseDataLength, incomingDataProtocol, serialNo)
-		responseErrorHex, _ := hex.DecodeString(data_p)
-		responseDataCRC := Checksum(responseErrorHex, table)                     //Error code in uint16
-		outgoingDataErrorCode := strconv.FormatUint(uint64(responseDataCRC), 16) //Error code in string
-		if len(outgoingDataErrorCode) == 3 {
-			outgoingDataErrorCode = fmt.Sprint("0", outgoingDataErrorCode)
-		}
-		outgoingDataPacket = fmt.Sprint(outgoingDataPacket, outgoingDataErrorCode)
-
-		outgoingDataPacket = fmt.Sprint(outgoingDataPacket, stopBits) //push stop bit
-		/* send response to terminal */
-		fmt.Println("OUTGOING :" + outgoingDataPacket)
-		hexDataPacket, responseDataError := hex.DecodeString(outgoingDataPacket)
-		/* set login status */
-		if responseDataError == nil {
-			_, writeError := conn.Write(hexDataPacket)
-			if incomingDataProtocol == "01" && writeError == nil {
-				fmt.Println("Login success for: " + terminalId)
-				loginState = true
-			}
-		} else {
-			fmt.Println("Response Data Error for :" + terminalId)
-			fmt.Println(responseDataError.Error())
-			return
-		}
-	}
 	return nil
 }
