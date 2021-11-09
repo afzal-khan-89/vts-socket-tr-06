@@ -26,7 +26,7 @@ func CreateTableForDevice(deviceId string) error {
 	statement_1 := "CREATE TABLE IF NOT EXISTS " + device
 	statement_2 := `(id INT NOT NULL AUTO_INCREMENT PRIMARY KEY UNIQUE, ` +
 		`is_valid TINYINT(1) NOT NULL, ` +
-		`data_time DATETIME(2) NOT NULL,` +
+		`data_time DATETIME NOT NULL,` +
 		`latitude VARCHAR(14) NOT NULL, ` +
 		`longitude VARCHAR(12) NOT NULL,` +
 		`speed FLOAT NOT NULL,` +
