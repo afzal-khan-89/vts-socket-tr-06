@@ -44,7 +44,8 @@ func main() {
 
 }
 func handleIt(conn net.Conn) {
-	var packet Packet
+	var packet packet
+
 	var terminalId string
 	var startBytes string
 
@@ -83,7 +84,7 @@ func handleIt(conn net.Conn) {
 			//dataLength := len(incomingDataArray)
 			startBytes = incomingDataArray[i][:4]
 			if startBytes == "7878" {
-				packet := fmt.Sprint(incomingDataArray[i], "0d0a")
+				packet.StartBytes = fmt.Sprint(incomingDataArray[i], "0d0a")
 				fmt.Println("log: Packet  : ", packet)
 				fmt.Println("log: packet length : ", len(packet))
 				packetLength := packet[4:6]
