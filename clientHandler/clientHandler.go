@@ -40,12 +40,12 @@ func responseForTerminal(conn net.Conn, recvPacket *packet.Packet, dataType *str
 
 		outgoingDataPacket = fmt.Sprint(outgoingDataPacket, recvPacket.StopBytes) //push stop bit
 		/* send response to terminal */
-		fmt.Println("OUTGOING :" + outgoingDataPacket)
 		hexDataPacket, responseDataError := hex.DecodeString(outgoingDataPacket)
 		/* set login status */
 
 		fmt.Println("OUT-GOING PACKET : ", outgoingDataPacket)
-		fmt.Println("OUT-GOING PACKET HED : ", hexDataPacket)
+		//fmt.Println("OUT-GOING PACKET HEX : ", hexDataPacket)
+		fmt.Printf("% x", hexDataPacket)
 
 		if responseDataError == nil {
 			_, writeError := conn.Write(hexDataPacket)

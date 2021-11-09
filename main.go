@@ -55,7 +55,7 @@ func handleIt(conn net.Conn) {
 			return
 		}
 
-		buff := make([]byte, 1024)
+		buff := make([]byte, 10240)
 
 		readLength, err := conn.Read(buff) // recv data
 		if err != nil {
